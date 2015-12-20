@@ -2,7 +2,7 @@
 Does dice and the such
 
 ###Dice Usage
-- !roll:
+#####!roll:
 -    XdY
 -    XdY+Z
 -    XdY-Z
