@@ -5,10 +5,10 @@ from twisted.internet import reactor, protocol
 from twisted.python import log
 
 from ConfigParser import ConfigParser
-'''
+
 from dice import DiceRoller
 dicer = DiceRoller()
-'''
+
 class SeventyThree(irc.IRCClient):
     
     def connectionMade(self):
@@ -32,8 +32,26 @@ class SeventyThree(irc.IRCClient):
         if msg.startswith("!roll"):
             msg = msg[6:]
             user = "%s: " % (user.split('!', 1)[0], )
-            roll = 'testing as of now' # dicer.base_roll(msg)
+            roll = dicer.base_roll(msg)
             self.msg(self.factory.channel, user + roll)
+        elif msg.startswith("!help"):
+            msg = msg[5:]
+            self.msg(self.factory.channel,
+                "Basic Usage:\n" +
+                "!roll XdY \n" +
+                "!roll XdY+-Z \n" +
+                "!roll Z*XdY \n" +
+                "!roll sXdY - sort low to high\n" +
+                "!roll vXdY - verbose\n" +
+                "!roll aXdY - array (no total)\n" +
+                "!begin - prints session begin\n" +
+                "!end - prints session end\n" +
+                "!pause - prints session pause\n" +
+                "!help - prints this screen\n" +
+                "!fullhelp - prints link to readme\n")
+        elif msg.startswith("!fullhelp"):
+            msg = msg[9:]
+            self.msg(self.factory.channel, "https://github.com/kilbyjmichael/PyRC-73Bot/blob/master/README.md")
         elif msg.startswith("!begin"):
             msg = msg[7:]
             self.msg(self.factory.channel, "**********Begin Session**********")

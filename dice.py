@@ -9,7 +9,7 @@ class DiceRoller:
     def __init__(self):
         return
     
-    def base_roll(s):
+    def base_roll(self, s):
         """General dice rolling"""
         sort = False
         verbose = False
@@ -69,6 +69,7 @@ class DiceRoller:
         if keep:
             keep = keep.group()
             keep = int(keep[1:])
+            
 
         multiRe = re.search(r'(\d+)\*(\d*d\d+)',s) # W*XdY
         if multiRe:
