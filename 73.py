@@ -17,6 +17,7 @@ class SeventyThree(irc.IRCClient):
         self.realname = self.factory.realname
         self.password = self.factory.password
         self.channels = self.factory.channels
+        self.admin_nicks = self.factory.admins
         irc.IRCClient.connectionMade(self)
     
     def signedOn(self):
@@ -48,8 +49,7 @@ class SeventyThree(irc.IRCClient):
             return
         if msg.startswith("!roll"):
             msg = msg[6:]
-            user = "%s: " % (user.split('!', 1)[0], )
-            roll = dicer.base_roll(msg)
+            user = "%s: " % (user.split('!', 1)[0], ) # formatted nicely
             self.msg(channel, user + roll)
         elif msg.startswith("!help"):
             msg = msg[5:]
@@ -66,6 +66,13 @@ class SeventyThree(irc.IRCClient):
                 "!pause - prints session pause\n" +
                 "!help - prints this screen\n" +
                 "!fullhelp - prints link to readme\n")
+        elif msg.startswith("!joinchan"):
+            msg = msg[10:]
+            user = user.split('!', 1)[0]
+            if user in self.admin_nicks:
+                self.join(msg)
+            else:
+                self.msg(channel, "I can't join a channel unless an admin tells me to, please contact %s." % (self.admin_nicks))
         elif msg.startswith("!fullhelp"):
             msg = msg[9:]
             self.msg(channel, "https://github.com/kilbyjmichael/PyRC-73Bot/blob/master/README.md")
@@ -85,11 +92,12 @@ class SeventyThree(irc.IRCClient):
 class SeventyThreeFactory(protocol.ClientFactory):
     protocol = SeventyThree
     
-    def __init__(self, channels, password, nickname='SeventyThree', realname='73'):
+    def __init__(self, channels, password, admins, nickname='SeventyThree', realname='73'):
         self.channels = channels
         self.nickname = nickname
         self.password = password
         self.realname = realname
+        self.admins = admins
     
     def clientConnectionLost(self, connector, reason):
         log.err("Lost connection (%s), reconnecting." % (reason))
@@ -111,6 +119,12 @@ if __name__ == "__main__":
             in config.get('channels', 'list').split('\n')
             if channel.strip()
         ]
+    admins = [
+            admin.strip()
+            for admin
+            in config.get('admins', 'list').split('\n')
+            if admin.strip()
+        ]
     # channel = config.get('irc', 'channel')
     nickname = config.get('irc', 'nickname')
     password = config.get('irc', 'password')
@@ -122,5 +136,5 @@ if __name__ == "__main__":
     print nickname
     print realname
     '''
-    reactor.connectTCP(server, int(port), SeventyThreeFactory(chanlist, password, nickname, realname))
+    reactor.connectTCP(server, int(port), SeventyThreeFactory(chanlist, password, admins, nickname, realname))
     reactor.run()

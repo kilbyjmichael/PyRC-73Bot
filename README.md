@@ -2,7 +2,7 @@
 Does dice and the such
 
 ###Dice Usage
-#####!roll:
+!roll:
 -    XdY
 -    XdY+Z
 -    XdY-Z
@@ -27,3 +27,18 @@ Does dice and the such
 -    X       - X d10s, grouped together and sorted by width.
 !tp:
     XpYmZ   - X+Y+Z d6s, separated into X panic dice, Y min-2 dice, & Z normal dice, sorted internally
+    
+###Game Usage
+- !pause - will print pause line for game play session
+- !begin - will print begin line for game play session
+- !end - will print end line for game play session
+
+###General Usage
+- !wiki - coming soon
+- !help - shows a basic use chart
+- !fullhelp - prints a link to this readme
+
+###Admin Usage
+- !joinchan x - 73 will join another channel
+- !quitchan x - coming soon
+- !stop password - will stop bot
