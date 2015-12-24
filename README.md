@@ -37,8 +37,12 @@ Does dice and the such
 - !wiki - coming soon
 - !help - shows a basic use chart
 - !fullhelp - prints a link to this readme
+- !say x - says x
 
 ###Admin Usage
-- !joinchan x - 73 will join another channel
+- !joinchan x - 73 will join another channel, writes to .ini file
 - !quitchan x - coming soon
 - !stop password - will stop bot
+- !reload - reloads config file
+- !addadmin nick - add admin to list
+- !nick nick - to change the name of the bot
