@@ -18,6 +18,7 @@ class SeventyThree(irc.IRCClient):
         self.password = self.factory.password
         self.channels = self.factory.channels
         self.admin_nicks = self.factory.admins
+        self.adminpass = self.factory.adminpass
         irc.IRCClient.connectionMade(self)
     
     def signedOn(self):
@@ -66,13 +67,41 @@ class SeventyThree(irc.IRCClient):
                 "!pause - prints session pause\n" +
                 "!help - prints this screen\n" +
                 "!fullhelp - prints link to readme\n")
+
+        elif msg.startswith("!message"):
+            if msg == "":
+                self.say(channel, "Well, ya gotta say somethin'...")
+            else:
+                self.msg(chan, ''.join(msg_list)) # privmsg a user or channel with the message
+
         elif msg.startswith("!joinchan"):
             msg = msg[10:]
             user = user.split('!', 1)[0]
             if user in self.admin_nicks:
                 self.join(msg)
+                # log to config file here
             else:
-                self.msg(channel, "I can't join a channel unless an admin tells me to, please contact %s." % (self.admin_nicks))
+                self.msg(channel, "I can't join a channel unless an admin tells me to.")
+        elif msg.startswith("!quitchan"):
+            user = user.split('!', 1)[0]
+            if user in self.admin_nicks:
+                if msg == "!quitchan":
+                    self.part(channel)
+                else:
+                    msg = msg[10:]
+                    self.part(msg)
+            else:
+                self.msg(channel, "I can't quit a channel unless an authorized user tells me to.")
+
+        elif msg.startswith("!stop"):
+            msg = msg[6:]
+            user = user.split('!', 1)[0]
+            if user in self.admin_nicks and msg == self.adminpass:
+                self.quit() # will rejoin unless ugly shit
+                os._exit(0) # fix this ugly shit
+            else:
+                self.msg(channel, "I can't quit unless an authorized user tells me to.")
+
         elif msg.startswith("!fullhelp"):
             msg = msg[9:]
             self.msg(channel, "https://github.com/kilbyjmichael/PyRC-73Bot/blob/master/README.md")
@@ -92,12 +121,13 @@ class SeventyThree(irc.IRCClient):
 class SeventyThreeFactory(protocol.ClientFactory):
     protocol = SeventyThree
     
-    def __init__(self, channels, password, admins, nickname='SeventyThree', realname='73'):
+    def __init__(self, channels, password, admins, adminpass, nickname='SeventyThree', realname='73'):
         self.channels = channels
         self.nickname = nickname
         self.password = password
         self.realname = realname
         self.admins = admins
+        self.adminpass = adminpass
     
     def clientConnectionLost(self, connector, reason):
         log.err("Lost connection (%s), reconnecting." % (reason))
@@ -122,9 +152,10 @@ if __name__ == "__main__":
     admins = [
             admin.strip()
             for admin
-            in config.get('admins', 'list').split('\n')
+            in config.get('admin', 'admins').split('\n')
             if admin.strip()
         ]
+    adminpass = config.get('admin', 'controlPass')
     # channel = config.get('irc', 'channel')
     nickname = config.get('irc', 'nickname')
     password = config.get('irc', 'password')
@@ -136,5 +167,5 @@ if __name__ == "__main__":
     print nickname
     print realname
     '''
-    reactor.connectTCP(server, int(port), SeventyThreeFactory(chanlist, password, admins, nickname, realname))
+    reactor.connectTCP(server, int(port), SeventyThreeFactory(chanlist, password, admins, adminpass, nickname, realname))
     reactor.run()
