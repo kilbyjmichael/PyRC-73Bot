@@ -7,6 +7,7 @@ from twisted.python import log
 from ConfigParser import ConfigParser
 
 from modules.dice import DiceRoller
+from modules.lastseen import LastSeen
 
 class SeventyThree(irc.IRCClient):
     
@@ -19,9 +20,9 @@ class SeventyThree(irc.IRCClient):
         self.admin_nicks = self.factory.admins
         self.adminpass = self.factory.adminpass
         irc.IRCClient.connectionMade(self)
-        
-        dicer = DiceRoller()
-    
+        self.dicer = DiceRoller()
+        self.seen = LastSeen()
+
     def signedOn(self):
         if self.password:
             self.msg("Nickserv", "IDENTIFY " + self.password)
@@ -62,7 +63,7 @@ class SeventyThree(irc.IRCClient):
         if msg.startswith("!roll"):
             msg = msg[6:]
             user = "%s: " % (user.split('!', 1)[0], ) # formatted nicely
-            roll = dicer.base_roll(msg)
+            roll = self.dicer.base_roll(msg)
             self.msg(channel, user + roll)
         elif msg.startswith("!help"):
             msg = msg[5:]
@@ -116,8 +117,14 @@ class SeventyThree(irc.IRCClient):
 
         elif msg.startswith("!seen"):
             msg = msg[6:]
-            # Calculate last seen here
-            self.msg(channel, "I last saw " + user + " in " + channel)
+            print msg
+            user_data = self.seen.last_seen_user(msg)
+            user_time, user_channel = user_data
+            print user_time, user_channel
+            if user_time == 'now':
+                self.msg(channel, "The user is on now! Check " + user_channel)
+            else:
+                self.msg(channel, "I last saw " + msg + " in " + user_channel + " at " + user_time)
 
         elif msg.startswith("!fullhelp"):
             msg = msg[9:]
@@ -139,17 +146,15 @@ class SeventyThree(irc.IRCClient):
             
     def userJoined(self, user, channel):
         '''Called when a user joins the channel'''
-        '''
-        get user, channel
-        save user, channel, jointime
-        '''
+        self.seen.store_joined(user, channel)
+        
+    def userQuit(self, user, channel):
+        '''Called when a user parts the channel'''
+        self.seen.store_quit(user, channel)
         
     def userQuit(self, user, channel):
         '''Called when a user joins the channel'''
-        '''
-        get user, channel
-        save user, channel, quittime
-        '''    
+        self.seen.store_quit(user, channel)
 
 class SeventyThreeFactory(protocol.ClientFactory):
     protocol = SeventyThree
