@@ -7,7 +7,6 @@ from twisted.python import log
 from ConfigParser import ConfigParser
 
 from modules.dice import DiceRoller
-dicer = DiceRoller()
 
 class SeventyThree(irc.IRCClient):
     
@@ -20,6 +19,8 @@ class SeventyThree(irc.IRCClient):
         self.admin_nicks = self.factory.admins
         self.adminpass = self.factory.adminpass
         irc.IRCClient.connectionMade(self)
+        
+        dicer = DiceRoller()
     
     def signedOn(self):
         if self.password:
@@ -43,11 +44,21 @@ class SeventyThree(irc.IRCClient):
         return
         
     def privmsg(self, user, channel, msg):
+    
+        """This will get called when the bot receives a message."""
+    
+        # Cut user and channel
         channel = channel.lower()
+        user = user.split('!', 1)[0]
+
         if not user:
             return
         if not msg.startswith("!"):
             return
+        if channel == user:
+            channel = user
+            
+        # Actual Commands start here
         if msg.startswith("!roll"):
             msg = msg[6:]
             user = "%s: " % (user.split('!', 1)[0], ) # formatted nicely
@@ -74,7 +85,6 @@ class SeventyThree(irc.IRCClient):
 
         elif msg.startswith("!joinchan"):
             msg = msg[10:]
-            user = user.split('!', 1)[0]
             if user in self.admin_nicks:
                 self.join(msg)
                 # log to config file here
@@ -83,7 +93,6 @@ class SeventyThree(irc.IRCClient):
                 for admin in self.admin_nicks:
                     self.notice(admin, "I am being told to stop by " + user)
         elif msg.startswith("!quitchan"):
-            user = user.split('!', 1)[0]
             if user in self.admin_nicks:
                 if msg == "!quitchan":
                     self.part(channel)
@@ -97,7 +106,6 @@ class SeventyThree(irc.IRCClient):
 
         elif msg.startswith("!stop"):
             msg = msg[6:]
-            user = user.split('!', 1)[0]
             if user in self.admin_nicks and msg == self.adminpass:
                 self.quit() # will rejoin unless ugly shit
                 os._exit(0) # fix this ugly shit
@@ -106,9 +114,14 @@ class SeventyThree(irc.IRCClient):
                 for admin in self.admin_nicks:
                     self.notice(admin, "I am being told to stop by " + user)
 
+        elif msg.startswith("!seen"):
+            msg = msg[6:]
+            # Calculate last seen here
+            self.msg(channel, "I last saw " + user + " in " + channel)
+
         elif msg.startswith("!fullhelp"):
             msg = msg[9:]
-            self.msg(channel, "https://github.com/kilbyjmichael/PyRC-73Bot/blob/master/README.md")
+            self.msg(channel, "https://github.com/kilbyjmichael/PyRC-73Bot/blob/master/Usage.md")
         elif msg.startswith("!begin"):
             msg = msg[7:]
             self.msg(channel, "**********Begin Session**********")
@@ -121,6 +134,22 @@ class SeventyThree(irc.IRCClient):
         elif msg.startswith("!"):
             self.msg(channel, "wut")
             log.err("Unknown Command: " + msg)
+            
+    # For tracking !seen
+            
+    def userJoined(self, user, channel):
+        '''Called when a user joins the channel'''
+        '''
+        get user, channel
+        save user, channel, jointime
+        '''
+        
+    def userQuit(self, user, channel):
+        '''Called when a user joins the channel'''
+        '''
+        get user, channel
+        save user, channel, quittime
+        '''    
 
 class SeventyThreeFactory(protocol.ClientFactory):
     protocol = SeventyThree
