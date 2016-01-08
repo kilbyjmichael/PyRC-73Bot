@@ -18,9 +18,9 @@ class LastSeen:
             return ['never', 'none']
         if quit == None:
             return ['never', 'none']
-        else:
-            joined = datetime.strptime(str(joined), date_format)
-            quit = datetime.strptime(str(quit), date_format)
+
+        joined = datetime.strptime(str(joined), date_format)
+        quit = datetime.strptime(str(quit), date_format)
         
         join_delta = datetime.now() - joined # join time minus now
         quit_delta = datetime.now() - quit # quit time minus now
@@ -45,14 +45,15 @@ class LastSeen:
             user_quittime = item['quittime']
             user_jointime = item['jointime']
             user_channel = item['channel']
+        if user_jointime == None:
+            return ['never', 'none']
         is_on = self.calculate_last_seen(user_jointime, user_quittime)
         if is_on: # True
             return ['now', str(user_channel)]
-        else:
-            return [str(user_quittime), str(user_channel)] # str for error handling
+        return [str(user_quittime), str(user_channel)] # str for error handling
     
     def store_joined(self, user, channel):
-        jointime = "2016-01-07 18:55:24"#str(datetime.now())[:19]
+        jointime = str(datetime.now())[:19]
         user_exists = self.database(user=user)
         if user_exists:
             self.database.update(user_exists, jointime=jointime)
