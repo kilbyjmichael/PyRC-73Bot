@@ -42,6 +42,7 @@ class SeventyThree(irc.IRCClient):
         log.msg("Kicked from %s by %s because %s"% (channel, kicker, message))
 
     def action(self, user, channel, data):
+        self.seen.store_active(user, channel)
         return
         
     def privmsg(self, user, channel, msg):
@@ -51,9 +52,12 @@ class SeventyThree(irc.IRCClient):
         # Cut user and channel
         channel = channel.lower()
         user = user.split('!', 1)[0]
-
+        
         if not user:
             return
+
+        self.seen.store_active(user, channel)
+        
         if not msg.startswith("!"):
             return
         if channel == user:
@@ -117,14 +121,15 @@ class SeventyThree(irc.IRCClient):
 
         elif msg.startswith("!seen"):
             msg = msg[6:]
-            print msg
-            user_data = self.seen.last_seen_user(msg)
+            user_data = self.seen.last_seen(msg)
             user_time, user_channel = user_data
-            print user_time, user_channel
-            if user_time == 'now':
-                self.msg(channel, "The user is on now! Check " + user_channel)
-            else:
-                self.msg(channel, "I last saw " + msg + " in " + user_channel + " at " + user_time)
+            if user_time == "none":
+                self.msg(channel, "I have never seen " + msg)
+                return
+            # split time
+            user_date = user_time[:10]
+            user_time = user_time[11:]
+            self.msg(channel, "I last saw " + msg + " in " + user_channel + " at " + user_time + " on " + user_date)
 
         elif msg.startswith("!fullhelp"):
             msg = msg[9:]
@@ -146,15 +151,15 @@ class SeventyThree(irc.IRCClient):
             
     def userJoined(self, user, channel):
         '''Called when a user joins the channel'''
-        self.seen.store_joined(user, channel)
+        self.seen.store_active(user, channel)
         
-    def userQuit(self, user, channel):
+    def userPart(self, user, channel):
         '''Called when a user parts the channel'''
-        self.seen.store_quit(user, channel)
+        self.seen.store_active(user, channel)
         
     def userQuit(self, user, channel):
         '''Called when a user joins the channel'''
-        self.seen.store_quit(user, channel)
+        self.seen.store_active(user, channel)
 
 class SeventyThreeFactory(protocol.ClientFactory):
     protocol = SeventyThree

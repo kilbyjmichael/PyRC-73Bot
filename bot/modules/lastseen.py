@@ -1,5 +1,4 @@
-from pydblite import Base
-from datetime import datetime
+import sqlite3
 
 class LastSeen:
     '''
@@ -7,73 +6,26 @@ class LastSeen:
     '''
     
     def __init__(self):
-        self.database = Base('test.pdl') #      'activetime' for last talk
-        self.database.create('user', 'channel', 'jointime', 'quittime', mode='open')
-        self.database.insert('firstUser', '#not_a_channel', '0', '0') # this is so the database won't break
+        self.db_filename = 'test.db'
+        self.connection = sqlite3.connect(self.db_filename)
+        self.cursor = self.connection.cursor()
+        self.cursor.execute('''CREATE TABLE if not exists irc (
+                        nick text primary key,
+                        channel text,
+                        last_active date)''')
         return
-        
-    def calculate_last_seen(self, joined, quit):
-        date_format = "%Y-%m-%d %H:%M:%S"
-        if joined == None:
-            return ['never', 'none']
-        if quit == None:
-            return ['never', 'none']
 
-        joined = datetime.strptime(str(joined), date_format)
-        quit = datetime.strptime(str(quit), date_format)
-        
-        join_delta = datetime.now() - joined # join time minus now
-        quit_delta = datetime.now() - quit # quit time minus now
-        
-        if join_delta > quit_delta:
-            # user would have quit
-            # because quit delta is smaller (meaning closer to now)
-            is_on = False
-            '''return last_seen #find this somewhere'''
-        else: # quit delta larger than join delta
-            # uesr should still be on
-            # because joined is bigger than quit
-            is_on = True
-        return is_on
-    
-    def last_seen_user(self, user):
-        record = self.database(user=user)
-        user_jointime = None
-        user_quittime = None
-        user_channel = None
-        for item in record:
-            user_quittime = item['quittime']
-            user_jointime = item['jointime']
-            user_channel = item['channel']
-        if user_jointime == None:
-            return ['never', 'none']
-        is_on = self.calculate_last_seen(user_jointime, user_quittime)
-        if is_on: # True
-            return ['now', str(user_channel)]
-        return [str(user_quittime), str(user_channel)] # str for error handling
-    
-    def store_joined(self, user, channel):
-        jointime = str(datetime.now())[:19]
-        user_exists = self.database(user=user)
-        if user_exists:
-            self.database.update(user_exists, jointime=jointime)
-            self.database.update(user_exists, channel=channel)
-            print "I updated the users jointime: " + str(user_exists)
-        else:
-            self.database.insert(user, channel, jointime, quittime="")
-            print "I made a dude"
-        self.database.commit()
-        return
-    
-    def store_quit(self, user, channel):
-        quittime = str(datetime.now())[:19]
-        user_exists = self.database(user=user)
-        if user_exists:
-            self.database.update(user_exists, quittime=quittime)
-            self.database.update(user_exists, channel=channel)
-            print "I updated the users quittime: " + str(user_exists)
-        else:
-            self.database.insert(user, channel, jointime="", quittime=quittime)
-            print "I made a dude"
-        self.database.commit()
+    def last_seen(self, user):
+        self.cursor.execute("SELECT last_active, channel FROM irc WHERE nick = ?", (user,))
+        is_data = self.cursor.fetchone() # I'm ugly, fix me
+        if is_data is not None:
+            self.cursor.execute("SELECT last_active, channel FROM irc WHERE nick = ?", (user,))
+            last_active, user_channel = self.cursor.fetchone()
+            return [str(last_active), str(user_channel)] # str for error handling
+        return ['none', 'never']
+
+    def store_active(self, user, channel):
+        self.cursor.execute("UPDATE irc SET last_active=DATETIME('now'), channel=? WHERE nick=?", (channel, user))
+        if self.cursor.rowcount != 1:
+            self.cursor.execute("INSERT INTO irc (nick, channel, last_active) VALUES (?, ?, DATETIME('now'))", (user, channel,))
         return
