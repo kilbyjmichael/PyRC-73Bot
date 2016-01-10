@@ -1,24 +1,32 @@
 from lastseen import LastSeen
-ls = LastSeen()
+ls = LastSeen("America/Chicago")
+
+from datetime import datetime
+import time
 
 USER = 'sageinventor'
 CHANNEL = '#akakdnd'
 
 ls.store_active(USER, CHANNEL)
-time, channel = ls.last_seen(USER)
+timeu, channel = ls.last_seen(USER)
+print timeu
 
-date = time[:10]
-time = time[11:]
+date = timeu[:10]
+timeu = timeu[11:]
+#timeu = datetime.strptime(timeu[11:], "%H:%M:%S")
+#timeu = timeu.strftime("%I:%M %p")
 
-print time
+print timeu
 print date
 print channel
+'''
+timeu, channel = ls.last_seen('localhost')
 
-time, channel = ls.last_seen('localhost')
+date = timeu[:10]
+timeu = timeu[11:]
 
-date = time[:10]
-time = time[11:]
 
-print time
+print timeu
 print date
 print channel
+'''

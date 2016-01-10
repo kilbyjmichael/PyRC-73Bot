@@ -1,4 +1,6 @@
 import os, sys
+from datetime import datetime
+import time
 
 from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol
@@ -19,9 +21,10 @@ class SeventyThree(irc.IRCClient):
         self.channels = self.factory.channels
         self.admin_nicks = self.factory.admins
         self.adminpass = self.factory.adminpass
+        self.timezone = self.factory.timezone
         irc.IRCClient.connectionMade(self)
         self.dicer = DiceRoller()
-        self.seen = LastSeen()
+        self.seen = LastSeen(self.timezone)
 
     def signedOn(self):
         if self.password:
@@ -122,13 +125,13 @@ class SeventyThree(irc.IRCClient):
         elif msg.startswith("!seen"):
             msg = msg[6:]
             user_data = self.seen.last_seen(msg)
-            user_time, user_channel = user_data
+            user_date, user_time, user_channel = user_data
             if user_time == "none":
                 self.msg(channel, "I have never seen " + msg)
                 return
-            # split time
-            user_date = user_time[:10]
-            user_time = user_time[11:]
+            if user_date == time.strftime("%Y-%m-%d"):
+                self.msg(channel, "I last saw " + msg + " in " + user_channel + " at " + user_time + " today")
+                return
             self.msg(channel, "I last saw " + msg + " in " + user_channel + " at " + user_time + " on " + user_date)
 
         elif msg.startswith("!fullhelp"):
@@ -164,13 +167,14 @@ class SeventyThree(irc.IRCClient):
 class SeventyThreeFactory(protocol.ClientFactory):
     protocol = SeventyThree
     
-    def __init__(self, channels, password, admins, adminpass, nickname='SeventyThree', realname='73'):
+    def __init__(self, channels, password, admins, adminpass, timezone, nickname='SeventyThree', realname='73'):
         self.channels = channels
         self.nickname = nickname
         self.password = password
         self.realname = realname
         self.admins = admins
         self.adminpass = adminpass
+        self.timezone = timezone
     
     def clientConnectionLost(self, connector, reason):
         log.err("Lost connection (%s), reconnecting." % (reason))
@@ -184,8 +188,16 @@ if __name__ == "__main__":
     log.startLogging(sys.stdout)
     config = ConfigParser()
     config.read('settings.ini')
+
     server = config.get('irc', 'server')
     port = config.get('irc', 'port')
+    adminpass = config.get('admin', 'controlPass')
+    # channel = config.get('irc', 'channel')
+    nickname = config.get('irc', 'nickname')
+    password = config.get('irc', 'password')
+    realname = config.get('irc', 'realname')
+    timezone = int(config.get('irc', 'timezone'))
+
     chanlist = [
             channel.strip()
             for channel
@@ -198,17 +210,14 @@ if __name__ == "__main__":
             in config.get('admin', 'admins').split('\n')
             if admin.strip()
         ]
-    adminpass = config.get('admin', 'controlPass')
-    # channel = config.get('irc', 'channel')
-    nickname = config.get('irc', 'nickname')
-    password = config.get('irc', 'password')
-    realname = config.get('irc', 'realname')
-    ''' Debug:
-    print server
-    print port
-    print chanlist
-    print nickname
-    print realname
-    '''
-    reactor.connectTCP(server, int(port), SeventyThreeFactory(chanlist, password, admins, adminpass, nickname, realname))
+
+    reactor.connectTCP(server, int(port),
+        SeventyThreeFactory(
+            chanlist,
+            password,
+            admins,
+            adminpass,
+            timezone,
+            nickname,
+            realname))
     reactor.run()
