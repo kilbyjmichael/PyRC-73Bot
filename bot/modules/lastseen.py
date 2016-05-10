@@ -38,4 +38,5 @@ class LastSeen:
         self.cursor.execute("UPDATE irc SET last_active=DATETIME('now'), channel=? WHERE nick=?", (channel, user))
         if self.cursor.rowcount != 1:
             self.cursor.execute("INSERT INTO irc (nick, channel, last_active) VALUES (?, ?, DATETIME('now'))", (user, channel,))
+        self.connection.commit()
         return
